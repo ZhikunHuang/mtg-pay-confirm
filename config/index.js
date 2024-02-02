@@ -42,7 +42,7 @@ module.exports = {
 
     // Paths
     assetsRoot: path.resolve(__dirname, '../dist'),
-    assetsSubDirectory: 'mtg-pay-confirm',
+    assetsSubDirectory: 'mtg-pay-confirm/dist/static',
     assetsPublicPath: '/',
 
     /**
