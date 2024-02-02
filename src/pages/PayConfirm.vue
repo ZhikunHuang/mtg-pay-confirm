@@ -18,7 +18,7 @@
             <label>文件密码：</label><el-input size="small" v-model="file.pwd" placeholder="没有不填"></el-input>
           </div>
           <el-tag type="danger" size="mini" style="margin-top: 5px; margin-left: 70px;width: fit-content;"
-            v-show="file.isShowError">请输入密码</el-tag>
+            v-show="!file.pwd">请输入密码</el-tag>
         </div>
       </div>
     </el-upload>
@@ -39,19 +39,11 @@ export default {
   },
   methods: {
     submitUpload() {
-      if (this.fileList) {
-
+      if (this.fileList) { 
         var isAnyNoPwd = this.fileList.some(item => !item.pwd);
         if (!isAnyNoPwd) {
           this.pdf2json()
-        } else {
-          this.fileList = deepClone(this.fileList.map(item => {
-            return {
-              isShowError: !item.pwd,
-              ...item
-            }
-          }));
-        }
+        } 
       }
       return;
     },
@@ -91,7 +83,7 @@ export default {
           }
         ]
       }
-      const Header = [['MID', 'SID', 'SchoolName', 'Count', 'Fee']];
+      const Header = [['MID', 'SID', '学校名', 'Count', 'Fee']];
 
       // 将JS数据数组转换为工作表。
       const headerWs = XLSX.utils.aoa_to_sheet(Header);
