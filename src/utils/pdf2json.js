@@ -42,7 +42,7 @@ export async function pdf2json(files) {
         }
         else if (x < 410 && x > 380) {
           value = value.replace(/,/g, "");
-          value = JSON.parse(value);
+          value = Number(value);
           if (row.Count == 0) {
             row.Count = value;
           }
@@ -52,7 +52,7 @@ export async function pdf2json(files) {
         }
         else if (x < 465 && x > 440) {
           value = value.replace(/,|¥/g, "");
-          value = JSON.parse(value);
+          value = Number(value);
           if (row.Fee == 0) {
             row.Fee = value;
           }
@@ -109,3 +109,12 @@ export async function pdf2json(files) {
     throw new Error('files is empty');
   }
 };
+
+export function deepClone(arr) {
+
+  return arr.map(function (item) {
+    return {
+      ...item
+    };
+  });
+}
