@@ -26,7 +26,8 @@
 </template>
 
 <script>
-import { pdf2json, deepClone } from '@/utils/pdf2json.js'
+import { pdf2json, deepClone } from '@/utils/pdf2json.js';
+import * as XLSX from "xlsx";
 export default {
   name: 'PayConfirm',
   data() {
@@ -39,7 +40,7 @@ export default {
   methods: {
     submitUpload() {
       if (this.fileList) {
- 
+
         var isAnyNoPwd = this.fileList.some(item => !item.pwd);
         if (!isAnyNoPwd) {
           this.pdf2json()
@@ -68,17 +69,41 @@ export default {
           name: file.name
         })
       }
-      
+
       this.fileList = deepClone(this.fileList.map(item => {
-            return {
-              isShowError: !item.pwd,
-              ...item
-            }
-          }));
+        return {
+          isShowError: !item.pwd,
+          ...item
+        }
+      }));
     },
     pdf2json: async function () {
       var data = await pdf2json(deepClone(this.fileList));
-      console.log(data);
+
+      if (!data || data.length === 0 || !data[0].MID) {
+        data = [
+          {
+            "MID": "MID",
+            "SID": "SID",
+            "SchoolName": "SchoolName",
+            "Count": "1",
+            "Fee": "2",
+          }
+        ]
+      }
+      const Header = [['MID', 'SID', 'SchoolName', 'Count', 'Fee']];
+
+      // 将JS数据数组转换为工作表。
+      const headerWs = XLSX.utils.aoa_to_sheet(Header);
+      const ws = XLSX.utils.sheet_add_json(headerWs, data, { skipHeader: true, origin: 'A2' });
+
+
+      /* 新建空的工作表 */
+      const wb = XLSX.utils.book_new();
+      // 可以自定义下载之后的sheetname
+      XLSX.utils.book_append_sheet(wb, ws, 'sheet1');
+      /* 生成xlsx文件 */
+      XLSX.writeFile(wb, `${new Date().getTime()}.xlsx`);
     }
   },
 }
