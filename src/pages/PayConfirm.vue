@@ -8,14 +8,16 @@
       <div slot="file" slot-scope="{file}">
         <div class="file-name">
           <div>
-            <label>文件名：</label><el-tag :title="file.name"> {{ file.name }} </el-tag>
+            <label>文件名：</label>
+            <el-tag :title="file.name"> {{ file.name }} </el-tag>
           </div>
           <el-tag style="margin-top: 5px; margin-left: 70px;width: fit-content;padding: 0;height: 0;"
             v-show="file.isShowError"></el-tag>
         </div>
         <div class="pwd">
           <div>
-            <label>文件密码：</label><el-input size="small" v-model="file.pwd" placeholder="没有不填"></el-input>
+            <label>文件密码：</label>
+            <el-input size="small" v-model="file.pwd" @keydown.prevent="() => { }" placeholder="PDF密码"></el-input>
           </div>
           <el-tag type="danger" size="mini" style="margin-top: 5px; margin-left: 70px;width: fit-content;"
             v-show="!file.pwd">请输入密码</el-tag>
@@ -39,11 +41,11 @@ export default {
   },
   methods: {
     submitUpload() {
-      if (this.fileList) { 
+      if (this.fileList) {
         var isAnyNoPwd = this.fileList.some(item => !item.pwd);
         if (!isAnyNoPwd) {
           this.pdf2json()
-        } 
+        }
       }
       return;
     },
