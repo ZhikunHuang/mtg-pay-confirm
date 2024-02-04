@@ -5,36 +5,40 @@
       <el-button slot="trigger" size="small" type="primary">选取文件</el-button>
       <el-button style="margin-left: 10px;" size="small" type="success" @click="submitUpload">数据对比</el-button>
 
-      <div slot="file" slot-scope="{file}">
+      <div slot="file"></div>
+    </el-upload>
+    <div class="file-list-container">
+      <div v-for="(file, index) in fileList" :key="file.url" style="margin-top:10px;">
         <div class="file-name">
           <div>
-            <label>文件名：</label>
+            <label>文件{{ index + 1 }}名：</label>
             <el-tag :title="file.name"> {{ file.name }} </el-tag>
           </div>
           <el-tag style="margin-top: 5px; margin-left: 70px;width: fit-content;padding: 0;height: 0;"
             v-show="file.isShowError"></el-tag>
         </div>
-        <div class="pwd">
+        <div class="pwd" v-show="file.checkPassword">
           <div>
-            <label>文件密码：</label>
-            <el-input size="small" v-model="file.pwd" @keydown.prevent="() => { }" placeholder="PDF密码"></el-input>
+            <label>密码：</label>
+            <el-input size="small" v-model="file.pwd" placeholder="PDF密码"></el-input>
           </div>
-          <el-tag type="danger" size="mini" style="margin-top: 5px; margin-left: 70px;width: fit-content;"
-            v-show="!file.pwd">请输入密码</el-tag>
+          <span type="danger" size="mini"
+            style="margin-top: 5px; font-size:12px; color:red; margin-left: 55px;width: fit-content;"
+            v-show="file.checkPassword && !file.pwd">请输入密码</span>
         </div>
       </div>
-    </el-upload>
+    </div>
   </div>
 </template>
 
 <script>
-import { pdf2json, deepClone } from '@/utils/pdf2json.js';
-import * as XLSX from "xlsx";
+import { pdf2json, deepClone, checkHasPassword, saveToFile } from '@/utils/pdf2json.js';
 export default {
   name: 'PayConfirm',
   data() {
     return {
-      fileList: []
+      fileList: [],
+      isLoading: false,
     }
   },
   created() {
@@ -42,7 +46,7 @@ export default {
   methods: {
     submitUpload() {
       if (this.fileList) {
-        var isAnyNoPwd = this.fileList.some(item => !item.pwd);
+        var isAnyNoPwd = this.fileList.some(item => !item.pwd && item.checkPassword);
         if (!isAnyNoPwd) {
           this.pdf2json()
         }
@@ -51,53 +55,34 @@ export default {
     },
     handleRemove() { },
     handlePreview() { },
-    handleUpload(e) {
+    async handleUpload(e) {
       var file = e.file;
       var url = URL.createObjectURL(file);
+      var checkPassword = await checkHasPassword(url)
       var hasUploaded = this.fileList.some((item) => item.name === file.name)
       if (!hasUploaded) {
 
         this.fileList.push({
           url: url,
           pwd: "",
-          name: file.name
+          name: file.name,
+          checkPassword: checkPassword,
         })
       }
 
-      this.fileList = deepClone(this.fileList.map(item => {
-        return {
-          isShowError: !item.pwd,
-          ...item
-        }
-      }));
     },
-    pdf2json: async function () {
-      var data = await pdf2json(deepClone(this.fileList));
-
-      if (!data || data.length === 0 || !data[0].MID) {
-        data = [
-          {
-            "MID": "MID",
-            "SID": "SID",
-            "SchoolName": "SchoolName",
-            "Count": "1",
-            "Fee": "2",
-          }
-        ]
+    async pdf2json() {
+      try {
+        var data = await pdf2json(deepClone(this.fileList));
+        if (!data || data.some(item => !item.MID)) {
+          this.$message.error('数据解析失败，请检查文件是否正确');
+          return;
+        }
+        const header = [['MID', 'SID', '学校名', 'Count', 'Fee']];
+        saveToFile(header, data, `${new Date().getTime()}.xlsx`);
+      } catch (error) {
+        this.$message.error('数据解析失败');
       }
-      const Header = [['MID', 'SID', '学校名', 'Count', 'Fee']];
-
-      // 将JS数据数组转换为工作表。
-      const headerWs = XLSX.utils.aoa_to_sheet(Header);
-      const ws = XLSX.utils.sheet_add_json(headerWs, data, { skipHeader: true, origin: 'A2' });
-
-
-      /* 新建空的工作表 */
-      const wb = XLSX.utils.book_new();
-      // 可以自定义下载之后的sheetname
-      XLSX.utils.book_append_sheet(wb, ws, 'sheet1');
-      /* 生成xlsx文件 */
-      XLSX.writeFile(wb, `${new Date().getTime()}.xlsx`);
     }
   },
 }
@@ -133,22 +118,26 @@ label {
   flex: 1;
 }
 
-.el-upload-list li>div {
+.file-list-container {
+  text-align: left;
+}
+
+.file-list-container>div {
   display: flex;
   align-items: flex-start;
 }
 
-.el-upload-list li>div>div {
+.file-list-container>div>div {
   display: inline-flex;
   flex: 1;
   flex-direction: column;
 }
 
-.el-upload-list .el-input {
+.file-list-container .el-input {
   width: 150px;
 }
 
-.el-upload-list .el-tag {
+.file-list-container .el-tag {
   display: inline-block;
   width: 200PX;
   margin-right: 15px;

@@ -4,7 +4,7 @@ import Vue from 'vue'
 import App from './App'
 import router from './router'
 
-import {Tag, Upload, Button, Input} from 'element-ui'; 
+import { Tag, Upload, Button, Input, Message } from 'element-ui';
 
 Vue.config.productionTip = false
 
@@ -13,6 +13,7 @@ Vue.component(Upload.name, Upload);
 Vue.component(Button.name, Button);
 Vue.component(Input.name, Input);
 
+Vue.prototype.$message = Message;
 // Vue.use(ElementUI);
 
 /* eslint-disable no-new */

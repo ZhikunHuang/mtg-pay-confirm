@@ -1,4 +1,6 @@
 
+import * as XLSX from "xlsx";
+
 export async function pdf2json(files) {
 
   async function convertPdfToJson(file) {
@@ -60,7 +62,7 @@ export async function pdf2json(files) {
             row.Fee += value;
           }
         }
-        else if (x == 151) {
+        else if (x >= 120 && x < 380) {
           row.SchoolName = value;
         }
         if (index == data.length - 1) {
@@ -117,4 +119,32 @@ export function deepClone(arr) {
       ...item
     };
   });
+}
+
+
+export function checkHasPassword(url) {
+  return new Promise((resolve, reject) => {
+
+    pdfjsLib.getDocument({ url: url, password: "" }).promise.then(res => {
+      resolve(false);
+    }).catch(err => {
+      resolve(true);
+    });
+  });
+}
+export
+
+  function saveToFile(header, data, fileName) {
+
+  // 将JS数据数组转换为工作表。
+  const headerWs = XLSX.utils.aoa_to_sheet(header);
+  const ws = XLSX.utils.sheet_add_json(headerWs, data, { skipHeader: true, origin: 'A2' });
+
+
+  /* 新建空的工作表 */
+  const wb = XLSX.utils.book_new();
+  // 可以自定义下载之后的sheetname
+  XLSX.utils.book_append_sheet(wb, ws, 'sheet1');
+  /* 生成xlsx文件 */
+  XLSX.writeFile(wb, fileName);
 }
