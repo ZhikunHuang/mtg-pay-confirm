@@ -1,6 +1,7 @@
 
 import * as XLSX from "xlsx";
 
+export var SheetNamePattern = /^(0?[1-9]|1[0-2])\月\((0?[1-9]|1[0-2])(0?[1-9]|[1-2][0-9]|3[0-1])-(0?[1-9]|1[0-2])(0?[1-9]|[1-2][0-9]|3[0-1])\)$/;
 export async function pdf2json(files) {
 
   async function convertPdfToJson(file) {
@@ -144,8 +145,6 @@ export function deepClone(arr) {
     };
   });
 }
-
-
 export function checkHasPassword(url) {
   return new Promise((resolve, reject) => {
 
@@ -156,9 +155,7 @@ export function checkHasPassword(url) {
     });
   });
 }
-export
-
-  function saveToFile(header, data, fileName) {
+export function saveToFile(header, data, fileName) {
 
   // 将JS数据数组转换为工作表。
   const headerWs = XLSX.utils.aoa_to_sheet(header);
@@ -172,3 +169,45 @@ export
   /* 生成xlsx文件 */
   XLSX.writeFile(wb, fileName);
 }
+
+/**
+ * 导入Excel到Json
+ * @param {String} file: blob:https://www.example.com/xxxx
+ * @returns any[]
+ */
+export function xlsx2Json(file) {
+
+  return new Promise(function (resolve, reject) {
+    const reader = new FileReader()
+    reader.onload = function (e) {
+      const data = e.target.result
+      this.wb = XLSX.read(data, {
+        type: 'binary'
+      })
+      const result = []
+      this.wb.SheetNames.forEach((sheetName, index) => {
+        var sheetData = XLSX.utils.sheet_to_json(this.wb.Sheets[sheetName]);
+        if (SheetNamePattern.test(sheetName)) {
+          sheetData = sheetData.map(item => {
+
+            return {
+              "MTG_MID": item.MID,
+              "MTG_SID": item.SID,
+              MTG_SchoolName: item["学校名"],
+              MTG_Count: item["件数"],
+              MTG_Fee: item["取扱金額"]
+            }
+
+          });
+        }
+        result.push({
+          sheetName: sheetName,
+          sheetData: sheetData
+        })
+      })
+      resolve(result)
+    }
+    reader.readAsBinaryString(file);
+  })
+  // reader.readAsBinaryString(file) // 传统input方法
+};

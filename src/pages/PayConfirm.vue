@@ -1,53 +1,111 @@
 <template>
-  <div class="pay-confirm">
-    <el-upload class="upload-demo" ref="upload" action="" :on-preview="handlePreview" :limit="2" accept=".pdf"
-      :file-list="fileList" :http-request="handleUpload" :auto-upload="true">
-      <el-button slot="trigger" size="small" type="primary" :disabled="fileList.length == 2">选取PDF文件</el-button>
-      <el-button style="margin-left: 10px;" size="small" type="success" :disabled="!fileList || fileList.length === 0"
-        @click="submitUpload">导出Excel</el-button>
-
-      <div slot="tip" class="el-upload__tip">最多上传两个文件</div>
-      <div slot="file"></div>
-    </el-upload>
-    <div class="file-list-container">
-      <div v-for="(file, index) in fileList" :key="file.url" style="margin-top:10px;">
-        <div class="file-name">
-          <div>
-            <label>文件名{{ index + 1 }}：</label>
-            <el-tag :title="file.name"> {{ file.name }} </el-tag>
-            <i class="el-icon-close" style="cursor: pointer;color:red" @click="removeFile(file)"></i>
+  <div>
+    <div class="pay-confirm">
+      <div style="display:flex;">
+        <el-upload class="upload-demo" ref="upload" action="" :on-preview="handlePreview" :limit="2" accept=".pdf"
+          :file-list="fileList" :http-request="handleUpload" :auto-upload="true">
+          <el-button slot="trigger" size="small" type="primary" :disabled="fileList.length == 2">选取PDF文件</el-button>
+          <el-button style="margin-left: 10px;" size="small" type="success" :disabled="!fileList || fileList.length === 0"
+            @click="ParsePDF">解析PDF</el-button>
+          <el-button style="margin-left: 10px;" size="small" type="success"
+            :disabled="!PdfDataList || PdfDataList.length === 0" @click="ExportExcel">导出Excel</el-button>
+          <div slot="tip" class="el-upload__tip">最多上传两个文件</div>
+          <div slot="file"></div>
+        </el-upload>
+        <el-upload type="warning" action="" :http-request="ImportExcel" size="small" :limit="1" accept=".xlsx"
+          :file-list="file2List" :auto-upload="true" style="margin-left: 10px;">
+          <!-- :disabled="!PdfDataList || PdfDataList.length === 0" -->
+          <el-button slot="trigger" size="small" type="warning">选取要对比的Excel文件</el-button>
+          <div slot="file"></div>
+        </el-upload>
+      </div>
+      <div class="file-list-container">
+        <div v-for="(file, index) in fileList" :key="file.url" style="margin-top:10px;">
+          <div class="file-name">
+            <div>
+              <label>文件名{{ index + 1 }}：</label>
+              <el-tag :title="file.name"> {{ file.name }} </el-tag>
+              <i class="el-icon-close" style="cursor: pointer;color:red" @click="removeFile(file)"></i>
+            </div>
+            <el-tag style="margin-top: 5px; margin-left: 70px;width: fit-content;padding: 0;height: 0;"
+              v-show="file.isShowError"></el-tag>
           </div>
-          <el-tag style="margin-top: 5px; margin-left: 70px;width: fit-content;padding: 0;height: 0;"
-            v-show="file.isShowError"></el-tag>
-        </div>
-        <div class="pwd" v-show="file.checkPassword">
-          <div>
-            <label>密码：</label>
-            <el-input size="small" v-model="file.pwd" placeholder="PDF密码"></el-input>
+          <div class="pwd" v-show="file.checkPassword">
+            <div>
+              <label>密码：</label>
+              <el-input size="small" v-model="file.pwd" placeholder="PDF密码"></el-input>
+            </div>
+            <span type="danger" size="mini"
+              style="margin-top: 5px; font-size:12px; color:red; margin-left: 55px;width: fit-content;"
+              v-show="file.checkPassword && !file.pwd">请输入密码</span>
           </div>
-          <span type="danger" size="mini"
-            style="margin-top: 5px; font-size:12px; color:red; margin-left: 55px;width: fit-content;"
-            v-show="file.checkPassword && !file.pwd">请输入密码</span>
         </div>
       </div>
+    </div>
+    <div class="table-container">
+      <br />
+      <el-table :data="PdfDataList" border style="width: 100%" height="600">
+        <el-table-column label="PDF">
+          <el-table-column prop="MID" label="MID" width="100">
+          </el-table-column>
+          <el-table-column prop="SID" label="SID" width="80">
+          </el-table-column>
+          <el-table-column prop="SchoolName" label="学校名" width="150">
+          </el-table-column>
+          <el-table-column prop="Count" label="Count" width="150">
+          </el-table-column>
+          <el-table-column prop="Fee" label="Fee">
+          </el-table-column>
+        </el-table-column>
+        <el-table-column label="MTG">
+          <el-table-column prop="MTG_MID" label="MID" width="100">
+          </el-table-column>
+          <el-table-column prop="MTG_SID" label="SID" width="80">
+          </el-table-column>
+          <el-table-column prop="MTG_SchoolName" label="学校名" width="150">
+          </el-table-column>
+          <el-table-column prop="MTG_Count" label="Count" width="150">
+          </el-table-column>
+          <el-table-column prop="MTG_Fee" label="Fee">
+          </el-table-column>
+        </el-table-column>
+      </el-table>
     </div>
   </div>
 </template>
 
 <script>
-import { pdf2json, deepClone, checkHasPassword, saveToFile } from '@/utils/pdf2json.js';
+import { pdf2json, deepClone, checkHasPassword, saveToFile, xlsx2Json, SheetNamePattern } from '@/utils/pdf2json.js';
 export default {
   name: 'PayConfirm',
   data() {
     return {
       fileList: [],
-      isLoading: false,
+      file2List: [],
+      montageFileList: null,
+
+      PdfDataList: [],
+      MTGDataList: []
     }
   },
   created() {
   },
   methods: {
-    submitUpload() {
+    ImportExcel(e) {
+      var url = URL.createObjectURL(e.file);
+      this.montageFileList = url
+      xlsx2Json(e.file).then((result) => {
+        console.log(result);
+      }).catch((err) => {
+        console.log(err);
+      });
+    },
+    ExportExcel() {
+
+      const header = [['MID', 'SID', '学校名', 'Count', 'Fee']];
+      saveToFile(header, this.PdfDataList, `${new Date().getTime()}.xlsx`);
+    },
+    ParsePDF() {
       if (this.fileList) {
         var isAnyNoPwd = this.fileList.some(item => !item.pwd && item.checkPassword);
         if (!isAnyNoPwd) {
@@ -79,14 +137,15 @@ export default {
 
     },
     async pdf2json() {
+
+      this.PdfDataList = [];
       try {
         var data = await pdf2json(deepClone(this.fileList));
         if (!data || data.some(item => !item.MID)) {
           this.$message.error('数据解析失败，请检查文件是否正确');
           return;
         }
-        const header = [['MID', 'SID', '学校名', 'Count', 'Fee']];
-        saveToFile(header, data, `${new Date().getTime()}.xlsx`);
+        this.PdfDataList = data;
       } catch (error) {
         this.$message.error('数据解析失败');
       }
@@ -103,6 +162,12 @@ label {
 
 .pay-confirm {
   width: 610PX;
+  margin: 0 auto;
+}
+
+.table-container {
+  width: 90%;
+  min-width: 1025px;
   margin: 0 auto;
 }
 
@@ -128,6 +193,9 @@ label {
 
 .file-list-container {
   text-align: left;
+  height: 130px;
+  border: 1px solid #dcdfe6;
+  padding: 0 0 0 5px;
 }
 
 .file-list-container>div {
