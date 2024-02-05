@@ -5,7 +5,18 @@ export async function pdf2json(files) {
 
   async function convertPdfToJson(file) {
     function dealPdfData(pageTexts) {
-      var data = pageTexts.reduce((prev, current) => {
+      var data = pageTexts.sort(function (a, b) {
+        return a.pageNumber - b.pageNumber;
+      }).map(item => {
+        var startIndex = item.items.findIndex(item => item.str === '税込金額');
+        var endIndex = item.items.findIndex(item => item.str === '合計');
+        var items = item.items;
+        if (endIndex > -1) {
+          items = items.filter((item, index) => index < endIndex);
+        }
+        items = items.filter((item, index) => index > startIndex);
+        return items;
+      }).reduce((prev, current) => {
         return prev.concat(current);
       }, []).map(function (item) {
         return {
@@ -14,7 +25,7 @@ export async function pdf2json(files) {
           hasEOL: item.hasEOL,
           ...item,
         }
-      }).filter(item => item.width > 0 && item.x < 465);
+      });
       var rows = [];
       var row = {
         MID: "",
@@ -26,8 +37,8 @@ export async function pdf2json(files) {
       data.forEach((item, index) => {
         var value = item.str.trim();
         var x = item.x;
-        if (x == 21) {
-          if (row.MID != "" && row.SID != "") {
+        if (x == 21 && value) {
+          if (row.MID) {
             rows.push(row);
             row = {
               MID: "",
@@ -45,47 +56,54 @@ export async function pdf2json(files) {
         else if (x < 410 && x > 380) {
           value = value.replace(/,/g, "");
           value = Number(value);
-          if (row.Count == 0) {
-            row.Count = value;
+          if (!isNaN(value)) {
+            if (row.Count == 0) {
+              row.Count = value;
+            }
+            else {
+              row.Count += value;
+            }
           }
-          else {
-            row.Count += value;
-          }
+
         }
-        else if (x < 465 && x > 440) {
+        else if (x < 475 && x > 415) {
           value = value.replace(/,|¥/g, "");
           value = Number(value);
-          if (row.Fee == 0) {
-            row.Fee = value;
-          }
-          else {
-            row.Fee += value;
+          if (!isNaN(value)) {
+            if (row.Fee == 0) {
+              row.Fee = value;
+            }
+            else {
+              row.Fee += value;
+            }
           }
         }
-        else if (x >= 120 && x < 380) {
-          row.SchoolName = value;
+        else if (x < 180 && x > 100) {
+          row.SchoolName || (row.SchoolName = value);
         }
         if (index == data.length - 1) {
           rows.push(row);
+          row = {
+            MID: "",
+            SID: "",
+            SchoolName: "",
+            Count: 0,
+            Fee: 0,
+          };
         }
       });
-      return rows.sort(function (a, b) {
-        if (a.MID != b.MID) {
-          return a.MID - b.MID;
-        }
-        return a.SID - b.SID;
-      });
+      return rows;
     }
     return await new Promise((resolve, reject) => {
       // 使用 PDF.js 进行解析
       pdfjsLib.getDocument({ url: file.url, password: file.pwd }).promise.then(async function (pdf) {
         // 通过循环获取每一页的文本
-        const promises = Array.from({ length: pdf.numPages }, (_, i) => {
-          return pdf.getPage(i + 1).then(async function (page) {
-            var text = await page.getTextContent();
-            var startIndex = text.items.findIndex(item => item.str === '取扱金額');
-            return text.items.filter((item, index) => index > startIndex);
-          });
+        const promises = Array.from({ length: pdf.numPages }, async (_, i) => {
+
+          var page = await pdf.getPage(i + 1);
+          var t = await page.getTextContent();
+          t["pageNumber"] = page.pageNumber;
+          return t;
         });
 
         // 处理所有页面的文本
@@ -103,7 +121,13 @@ export async function pdf2json(files) {
       var data = await convertPdfToJson(item);
       dataList = dataList.concat(data);
     }
-    return dataList;
+    var data = dataList.sort(function (a, b) {
+      if (a.MID != b.MID) {
+        return a.MID - b.MID;
+      }
+      return a.SID - b.SID;
+    }).filter(item => item.Fee > 0);
+    return data
   }
   if (files && files.length > 0) {
     return await execute(files);

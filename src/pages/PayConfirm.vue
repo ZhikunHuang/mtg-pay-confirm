@@ -1,18 +1,21 @@
 <template>
   <div class="pay-confirm">
-    <el-upload class="upload-demo" ref="upload" action="" :on-preview="handlePreview" :on-remove="handleRemove" :limit="2"
-      accept=".pdf" :file-list="fileList" :http-request="handleUpload" :auto-upload="true">
-      <el-button slot="trigger" size="small" type="primary">选取文件</el-button>
-      <el-button style="margin-left: 10px;" size="small" type="success" @click="submitUpload">数据对比</el-button>
+    <el-upload class="upload-demo" ref="upload" action="" :on-preview="handlePreview" :limit="2" accept=".pdf"
+      :file-list="fileList" :http-request="handleUpload" :auto-upload="true">
+      <el-button slot="trigger" size="small" type="primary" :disabled="fileList.length == 2">选取PDF文件</el-button>
+      <el-button style="margin-left: 10px;" size="small" type="success" :disabled="!fileList || fileList.length === 0"
+        @click="submitUpload">导出Excel</el-button>
 
+      <div slot="tip" class="el-upload__tip">最多上传两个文件</div>
       <div slot="file"></div>
     </el-upload>
     <div class="file-list-container">
       <div v-for="(file, index) in fileList" :key="file.url" style="margin-top:10px;">
         <div class="file-name">
           <div>
-            <label>文件{{ index + 1 }}名：</label>
+            <label>文件名{{ index + 1 }}：</label>
             <el-tag :title="file.name"> {{ file.name }} </el-tag>
+            <i class="el-icon-close" style="cursor: pointer;color:red" @click="removeFile(file)"></i>
           </div>
           <el-tag style="margin-top: 5px; margin-left: 70px;width: fit-content;padding: 0;height: 0;"
             v-show="file.isShowError"></el-tag>
@@ -53,7 +56,11 @@ export default {
       }
       return;
     },
-    handleRemove() { },
+    removeFile(file) {
+      this.fileList = this.fileList.filter(item => item.name !== file.name)
+      URL.revokeObjectURL(file.url);
+
+    },
     handlePreview() { },
     async handleUpload(e) {
       var file = e.file;
@@ -95,7 +102,7 @@ label {
 }
 
 .pay-confirm {
-  width: 600PX;
+  width: 610PX;
   margin: 0 auto;
 }
 
@@ -105,6 +112,7 @@ label {
 
 .file-name {
   display: flex;
+  margin-right: 15px;
 }
 
 .file-name>div {
@@ -140,7 +148,7 @@ label {
 .file-list-container .el-tag {
   display: inline-block;
   width: 200PX;
-  margin-right: 15px;
+  margin-right: 5px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
