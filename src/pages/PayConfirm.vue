@@ -45,6 +45,7 @@
     <div class="table-container">
       <br />
       <el-table :data="PdfDataList" border style="width: 100%" height="600">
+        <el-table-column prop="Balance" label="差额" fixed></el-table-column>
         <el-table-column label="PDF">
           <el-table-column prop="MID" label="MID" width="100">
           </el-table-column>
@@ -84,20 +85,55 @@ export default {
       file2List: [],
       montageFileList: null,
 
-      PdfDataList: [],
-      MTGDataList: []
+      PdfDataList: []
     }
   },
   created() {
   },
   methods: {
     ImportExcel(e) {
+      function mergeDataList(baseData, mergeData) {
+        var result = [];
+        baseData.forEach((item, index) => {
+          var mergeItem = mergeData.find(mtgItem => mtgItem.MTG_MID == item.MID && mtgItem.MTG_SID == item.SID);
+          if (mergeItem) {
+            result.push({
+              ...item,
+              ...mergeItem,
+              Balance: item.Fee - mergeItem.MTG_Fee
+            })
+          } else {
+            result.push({
+              ...item,
+              MTG_MID: "",
+              MTG_SID: "",
+              MTG_SchoolName: "",
+              MTG_Count: "",
+              MTG_Fee: "",
+              Balance: item.Fee
+            })
+          }
+        })
+        return result;
+      }
       var url = URL.createObjectURL(e.file);
       this.montageFileList = url
+      var sheetData = [];
+      var self = this;
       xlsx2Json(e.file).then((result) => {
-        console.log(result);
-      }).catch((err) => {
-        console.log(err);
+        sheetData = result.find(item => SheetNamePattern.test(item.sheetName)).sheetData;
+        if (!self.PdfDataList || self.PdfDataList.length === 0) {
+          self.PdfDataList = sheetData
+        } else {
+          if (self.PdfDataList.length == sheetData.length) {
+            self.PdfDataList = mergeDataList(self.PdfDataList, sheetData);
+          } else {
+            sheetData.length > self.PdfDataList.length ?
+              self.PdfDataList = mergeDataList(sheetData, self.PdfDataList) :
+              self.PdfDataList = mergeDataList(self.PdfDataList, sheetData);
+          }
+        }
+
       });
     },
     ExportExcel() {
