@@ -44,8 +44,9 @@
     </div>
     <div class="table-container">
       <br />
-      <el-table :data="PdfDataList" border style="width: 100%" height="600">
-        <el-table-column prop="Balance" label="差额" fixed></el-table-column>
+      <el-table :data="PdfDataList" border style="width: 100%" height="600" :row-class-name="tableRowClassName"
+        :filter-method="filterBalance">
+        <el-table-column prop="Balance" label="差额" fixed :filters="getFilterData()"></el-table-column>
         <el-table-column label="PDF">
           <el-table-column prop="MID" label="MID" width="100">
           </el-table-column>
@@ -185,7 +186,24 @@ export default {
       } catch (error) {
         this.$message.error('数据解析失败');
       }
-    }
+    },
+    tableRowClassName({ row, rowIndex }) {
+      if (row.Balance != 0) {
+        return 'warning-row';
+      }
+      return '';
+    },
+    getFilterData() {
+      return this.PdfDataList.map((item) => {
+        return {
+          text: item.Balance,
+          value: item.Balance
+        }
+      })
+    },
+    filterBalance(value, row) {
+      return row.Balance === Balance;
+    },
   },
 }
 </script>
@@ -194,6 +212,10 @@ export default {
 <style scoped>
 label {
   display: inline-block;
+}
+
+.el-table .warning-row {
+  background: oldlace;
 }
 
 .pay-confirm {
