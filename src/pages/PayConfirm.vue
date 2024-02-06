@@ -44,9 +44,9 @@
     </div>
     <div class="table-container">
       <br />
-      <el-table :data="PdfDataList" border style="width: 100%" height="600" :row-class-name="tableRowClassName"
-        :filter-method="filterBalance">
-        <el-table-column prop="Balance" label="差额" fixed :filters="getFilterData()"></el-table-column>
+      <el-table :data="PdfDataList" border style="width: 100%" height="600" :row-class-name="tableRowClassName">
+        <el-table-column prop="Balance" label="差额" fixed :filters="getFilterData()"
+          :filter-method="doFilterBalance"></el-table-column>
         <el-table-column label="PDF">
           <el-table-column prop="MID" label="MID" width="100">
           </el-table-column>
@@ -199,10 +199,12 @@ export default {
           text: item.Balance,
           value: item.Balance
         }
-      })
+      }).filter((item, index, self) => {
+        return self.findIndex(t => t.text === item.text) === index;
+      });
     },
-    filterBalance(value, row) {
-      return row.Balance === Balance;
+    doFilterBalance(value, row) {
+      return row.Balance === value;
     },
   },
 }
@@ -214,9 +216,6 @@ label {
   display: inline-block;
 }
 
-.el-table .warning-row {
-  background: oldlace;
-}
 
 .pay-confirm {
   width: 610PX;
@@ -228,6 +227,11 @@ label {
   min-width: 1025px;
   margin: 0 auto;
 }
+
+.table-container .el-table .warning-row {
+  background-color: #E6A23C;
+}
+
 
 .upload-demo {
   text-align: left;
