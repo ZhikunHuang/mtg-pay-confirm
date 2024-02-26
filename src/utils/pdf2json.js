@@ -1,7 +1,7 @@
 
 import * as XLSX from "xlsx";
 
-export var SheetNamePattern = /^(0?[1-9]|1[0-2])\月$/;
+export var SheetNamePattern = /^(0?[1-9]|1[0-2])\月(\((0?[1-9]|1[0-2])(0?[1-9]|[1-2][0-9]|3[0-1])-(0?[1-9]|1[0-2])(0?[1-9]|[1-2][0-9]|3[0-1])\))?$/;
 export async function pdf2json(files) {
 
   async function convertPdfToJson(file) {
@@ -137,6 +137,28 @@ export async function pdf2json(files) {
   }
 };
 
+/**
+ *
+ * @param {string} url
+ * @param {string} password
+ * @returns { Promise<URL> } Blob url
+ */
+export function getBlobDataWithPassword(url, password) {
+
+  return new Promise((resolve, reject) => {
+
+    pdfjsLib.getDocument({ url: url, password: password }).promise.then(async res => {
+      var buffer = await res.getData();
+      var blobData = new Blob([buffer], { type: "application/pdf" });
+      var url = URL.createObjectURL(blobData);
+      resolve(url);
+    }).catch(err => {
+      reject("");
+    });
+  });
+
+
+}
 export function deepClone(arr) {
 
   return arr.map(function (item) {
@@ -198,6 +220,11 @@ export function xlsx2Json(file) {
               MTG_Fee: item["取扱金額"]
             }
 
+          }).sort(function (a, b) {
+            if (a.MTG_MID != b.MTG_MID) {
+              return a.MTG_MID - b.MTG_MID;
+            }
+            return a.MTG_SID - b.MTG_SID;
           });
         }
         result.push({

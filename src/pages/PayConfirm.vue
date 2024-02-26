@@ -77,7 +77,7 @@
 </template>
 
 <script>
-import { pdf2json, deepClone, checkHasPassword, saveToFile, xlsx2Json, SheetNamePattern } from '@/utils/pdf2json.js';
+import { pdf2json, deepClone, checkHasPassword, saveToFile, xlsx2Json, SheetNamePattern, getBlobURLWithPassword } from '@/utils/pdf2json.js';
 export default {
   name: 'PayConfirm',
   data() {
@@ -122,17 +122,23 @@ export default {
       var sheetData = [];
       var self = this;
       xlsx2Json(e.file).then((result) => {
-        sheetData = result.find(item => SheetNamePattern.test(item.sheetName)).sheetData;
-        if (!self.PdfDataList || self.PdfDataList.length === 0) {
-          self.PdfDataList = sheetData
-        } else {
-          if (self.PdfDataList.length == sheetData.length) {
-            self.PdfDataList = mergeDataList(self.PdfDataList, sheetData);
+        var res = result.find(item => SheetNamePattern.test(item.sheetName));
+        if (res) {
+
+          sheetData = res.sheetData;
+          if (!self.PdfDataList || self.PdfDataList.length === 0) {
+            self.PdfDataList = sheetData
           } else {
-            sheetData.length > self.PdfDataList.length ?
-              self.PdfDataList = mergeDataList(sheetData, self.PdfDataList) :
+            if (self.PdfDataList.length == sheetData.length) {
               self.PdfDataList = mergeDataList(self.PdfDataList, sheetData);
+            } else {
+              sheetData.length > self.PdfDataList.length ?
+                self.PdfDataList = mergeDataList(sheetData, self.PdfDataList) :
+                self.PdfDataList = mergeDataList(self.PdfDataList, sheetData);
+            }
           }
+        } else {
+          this.$message.error('数据解析失败，请检查文件是否正确');
         }
 
       });
@@ -160,7 +166,7 @@ export default {
     async handleUpload(e) {
       var file = e.file;
       var url = URL.createObjectURL(file);
-      var checkPassword = await checkHasPassword(url)
+      // var checkPassword = await checkHasPassword(url)
       var hasUploaded = this.fileList.some((item) => item.name === file.name)
       if (!hasUploaded) {
 
