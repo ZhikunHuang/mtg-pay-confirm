@@ -5,6 +5,7 @@ import App from './App'
 import router from './router'
 
 import { Tag, Upload, Button, Input, Message, Table, TableColumn } from 'element-ui';
+import 'element-ui/lib/theme-chalk/index.css';
 
 Vue.config.productionTip = false
 

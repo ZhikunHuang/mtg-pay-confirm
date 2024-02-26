@@ -174,7 +174,7 @@ export default {
           url: url,
           pwd: "",
           name: file.name,
-          checkPassword: checkPassword,
+          checkPassword: true,
         })
       }
 
