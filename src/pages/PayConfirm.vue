@@ -15,7 +15,8 @@
         <el-upload type="warning" action="" :http-request="ImportExcel" size="small" :limit="1" accept=".xlsx"
           :file-list="file2List" :auto-upload="true" style="margin-left: 10px;">
           <!-- :disabled="!PdfDataList || PdfDataList.length === 0" -->
-          <el-button slot="trigger" size="small" type="warning">选取要对比的Excel文件</el-button>
+          <el-button slot="trigger" size="small" type="warning"
+            :disabled="!PdfDataList || PdfDataList.length === 0">选取要对比的Excel文件</el-button>
           <div slot="file"></div>
         </el-upload>
       </div>
@@ -160,7 +161,7 @@ export default {
     removeFile(file) {
       this.fileList = this.fileList.filter(item => item.name !== file.name)
       URL.revokeObjectURL(file.url);
-
+      this.PdfDataList = [];
     },
     handlePreview() { },
     async handleUpload(e) {
