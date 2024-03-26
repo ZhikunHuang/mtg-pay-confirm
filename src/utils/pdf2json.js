@@ -127,7 +127,7 @@ export async function pdf2json(files) {
         return a.MID - b.MID;
       }
       return a.SID - b.SID;
-    }).filter(item => item.Fee > 0);
+    }).filter(item => item.Fee != 0);
     return data
   }
   if (files && files.length > 0) {
