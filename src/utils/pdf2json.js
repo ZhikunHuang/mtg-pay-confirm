@@ -179,15 +179,17 @@ export function checkHasPassword(url) {
 }
 export function saveToFile(header, data, fileName) {
 
-  // 将JS数据数组转换为工作表。
-  const headerWs = XLSX.utils.aoa_to_sheet(header);
-  const ws = XLSX.utils.sheet_add_json(headerWs, data, { skipHeader: true, origin: 'A2' });
+  const jws = XLSX.utils.json_to_sheet([]);
 
+  XLSX.utils.sheet_add_aoa(jws, header);
+
+  //Starting in the second row to avoid overriding and skipping headers
+  XLSX.utils.sheet_add_json(jws, data, { origin: 'A2', skipHeader: true });
 
   /* 新建空的工作表 */
   const wb = XLSX.utils.book_new();
   // 可以自定义下载之后的sheetname
-  XLSX.utils.book_append_sheet(wb, ws, 'sheet1');
+  XLSX.utils.book_append_sheet(wb, jws, 'sheet1');
   /* 生成xlsx文件 */
   XLSX.writeFile(wb, fileName);
 }
@@ -217,7 +219,8 @@ export function xlsx2Json(file) {
               "MTG_SID": item.SID,
               MTG_SchoolName: item["学校名"],
               MTG_Count: item["件数"],
-              MTG_Fee: item["取扱金額"]
+              MTG_Fee: item["取扱金額"],
+              MTG_PayType: item["タイプ"],
             }
 
           }).sort(function (a, b) {

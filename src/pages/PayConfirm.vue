@@ -4,11 +4,10 @@
       <div style="display:flex;">
         <el-upload class="upload-demo" ref="upload" action="" :on-preview="handlePreview" :limit="2" accept=".pdf"
           :file-list="fileList" :http-request="handleUpload" :auto-upload="true">
-          <el-button slot="trigger" size="small" type="primary" :disabled="fileList.length == 2">选取PDF文件</el-button>
-          <el-button style="margin-left: 10px;" size="small" type="success" :disabled="!fileList || fileList.length === 0"
-            @click="ParsePDF">解析PDF</el-button>
+          <el-button slot="trigger" size="small" type="primary" :disabled="fileList.length == 2">选取PDF文件①</el-button>
           <el-button style="margin-left: 10px;" size="small" type="success"
-            :disabled="!PdfDataList || PdfDataList.length === 0" @click="ExportExcel">导出Excel</el-button>
+            :disabled="!fileList || fileList.length === 0" @click="ParsePDF">解析PDF②</el-button>
+
           <div slot="tip" class="el-upload__tip">最多上传两个文件</div>
           <div slot="file"></div>
         </el-upload>
@@ -16,7 +15,10 @@
           :file-list="file2List" :auto-upload="true" style="margin-left: 10px;">
           <!-- :disabled="!PdfDataList || PdfDataList.length === 0" -->
           <el-button slot="trigger" size="small" type="warning"
-            :disabled="!PdfDataList || PdfDataList.length === 0">选取要对比的Excel文件</el-button>
+            :disabled="!PdfDataList || PdfDataList.length === 0">选取要对比的Excel文件③</el-button>
+          <el-button style="margin-left: 10px;" size="small" type="success"
+            :disabled="(!PdfDataList || PdfDataList.length === 0) || !excelFile"
+            @click="ExportExcel">导出Excel④</el-button>
           <div slot="file"></div>
         </el-upload>
       </div>
@@ -85,6 +87,7 @@ export default {
     return {
       fileList: [],
       file2List: [],
+      excelFile: null,
       montageFileList: null,
 
       PdfDataList: []
@@ -102,7 +105,7 @@ export default {
             result.push({
               ...item,
               ...mergeItem,
-              Balance: item.Fee - mergeItem.MTG_Fee
+              Balance: mergeItem.MTG_Fee - item.Fee
             })
           } else {
             result.push({
@@ -112,7 +115,7 @@ export default {
               MTG_SchoolName: "",
               MTG_Count: "",
               MTG_Fee: "",
-              Balance: item.Fee
+              Balance: 0 - item.Fee
             })
           }
         })
@@ -125,6 +128,7 @@ export default {
       xlsx2Json(e.file).then((result) => {
         var res = result.find(item => SheetNamePattern.test(item.sheetName));
         if (res) {
+          self.excelFile = e.file;
 
           sheetData = res.sheetData;
           if (!self.PdfDataList || self.PdfDataList.length === 0) {
@@ -143,13 +147,26 @@ export default {
         }
 
       });
+      return;
     },
     ExportExcel() {
 
-      const header = [['MID', 'SID', '学校名', 'Count', 'Fee']];
-      saveToFile(header, this.PdfDataList, `${new Date().getTime()}.xlsx`);
+      const header = [['MID', 'SID', '学校名', 'Montage 取扱金額', 'タイプ', 'SBPS 取扱金額', '差额']];
+      const exportData = this.PdfDataList.filter(item => item.Balance != 0).map(item => {
+        return {
+          MID: item.MID,
+          SID: item.SID,
+          "SchoolName": item.MTG_SchoolName,
+          'MTG_Fee': item.MTG_Fee,
+          'MTG_PayType': item.MTG_PayType,
+          'SBPS_Fee': item.Fee,
+          'Balance': item.Balance
+        }
+      });
+      saveToFile(header, exportData, `${new Date().getTime()}.xlsx`);
     },
     ParsePDF() {
+      self.excelFile = null;
       if (this.fileList) {
         var isAnyNoPwd = this.fileList.some(item => !item.pwd && item.checkPassword);
         if (!isAnyNoPwd) {
