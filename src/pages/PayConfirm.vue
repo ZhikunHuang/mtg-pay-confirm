@@ -88,8 +88,6 @@ export default {
       fileList: [],
       file2List: [],
       excelFile: null,
-      montageFileList: null,
-
       PdfDataList: []
     }
   },
@@ -97,32 +95,59 @@ export default {
   },
   methods: {
     ImportExcel(e) {
-      function mergeDataList(baseData, mergeData) {
+      this.file2List = [];
+      this.excelFile = null;
+      function mergeDataList(pdfDataList, excelDataList) {
+
         var result = [];
-        baseData.forEach((item, index) => {
-          var mergeItem = mergeData.find(mtgItem => mtgItem.MTG_MID == item.MID && mtgItem.MTG_SID == item.SID);
-          if (mergeItem) {
+        const unionData = pdfDataList.map((item) => {
+          return {
+            MID: item.MID,
+            SID: item.SID,
+          }
+        }).concat(excelDataList.map((item) => {
+          return {
+            MID: item.MTG_MID,
+            SID: item.MTG_SID,
+          }
+        })).filter((item, index, self) => {
+          return self.findIndex(t => t.MID === item.MID && t.SID === item.SID) === index;
+        });
+        unionData.forEach(item => {
+          const pdfItem = pdfDataList.find(pdfItem => pdfItem.MID === item.MID && pdfItem.SID === item.SID);
+          const excelItem = excelDataList.find(excelItem => excelItem.MTG_MID === item.MID && excelItem.MTG_SID === item.SID);
+          if (!pdfItem) {
             result.push({
-              ...item,
-              ...mergeItem,
-              Balance: mergeItem.MTG_Fee - item.Fee
+              ...excelItem,
+              MID: "",
+              SID: "",
+              SchoolName: "",
+              Count: "",
+              Fee: "",
+              Balance: excelItem.MTG_Fee
             })
-          } else {
+          } else if (!excelItem) {
             result.push({
-              ...item,
+              ...pdfItem,
               MTG_MID: "",
               MTG_SID: "",
               MTG_SchoolName: "",
               MTG_Count: "",
               MTG_Fee: "",
-              Balance: 0 - item.Fee
+              Balance: 0 - pdfItem.Fee
+            })
+          } else {
+            result.push({
+              ...pdfItem,
+              ...excelItem,
+              Balance: excelItem.MTG_Fee - pdfItem.Fee
             })
           }
-        })
+
+
+        });
         return result;
       }
-      var url = URL.createObjectURL(e.file);
-      this.montageFileList = url
       var sheetData = [];
       var self = this;
       xlsx2Json(e.file).then((result) => {
@@ -131,17 +156,8 @@ export default {
           self.excelFile = e.file;
 
           sheetData = res.sheetData;
-          if (!self.PdfDataList || self.PdfDataList.length === 0) {
-            self.PdfDataList = sheetData
-          } else {
-            if (self.PdfDataList.length == sheetData.length) {
-              self.PdfDataList = mergeDataList(self.PdfDataList, sheetData);
-            } else {
-              sheetData.length > self.PdfDataList.length ?
-                self.PdfDataList = mergeDataList(sheetData, self.PdfDataList) :
-                self.PdfDataList = mergeDataList(self.PdfDataList, sheetData);
-            }
-          }
+
+          self.PdfDataList = mergeDataList(self.PdfDataList || [], sheetData);
         } else {
           this.$message.error('数据解析失败，请检查文件是否正确');
         }
@@ -151,22 +167,39 @@ export default {
     },
     ExportExcel() {
 
-      const header = [['MID', 'SID', '学校名', 'Montage 取扱金額', 'タイプ', 'SBPS 取扱金額', '差额']];
+      const header = [['MID', 'SID', 'MTG_学校名', 'タイプ', 'MTG_取扱金額', "Count", 'SBPS_取扱金額', 'SBPS_Count', '差额', "差量"]];
       const exportData = this.PdfDataList.filter(item => item.Balance != 0).map(item => {
         return {
           MID: item.MID,
           SID: item.SID,
-          "SchoolName": item.MTG_SchoolName,
-          'MTG_Fee': item.MTG_Fee,
+          "MTG_SchoolName": item.MTG_SchoolName,
           'MTG_PayType': item.MTG_PayType,
-          'SBPS_Fee': item.Fee,
-          'Balance': item.Balance
+          'MTG_Fee': item.MTG_Fee,
+          "MTG_Count": item.MTG_Count,
+          'Fee': item.Fee,
+          'Count': item.Count,
+          'Balance': item.Balance,
+          "diffCount": Math.abs(Number(item.MTG_Count) - Number(item.Count))
         }
       });
+      exportData.push({
+        MID: '总计',
+        SID: '',
+        "MTG_SchoolName": '',
+        'MTG_PayType': '',
+        'MTG_Fee': exportData.reduce((prev, item) => prev + Number(item.MTG_Fee), 0),
+        "MTG_Count": exportData.reduce((prev, item) => prev + Number(item.MTG_Count), 0),
+        'Fee': exportData.reduce((prev, item) => prev + Number(item.Fee), 0),
+        'Count': exportData.reduce((prev, item) => prev + Number(item.Count), 0),
+        'Balance': exportData.reduce((prev, item) => prev + Number(item.Balance), 0),
+        "diffCount": exportData.reduce((prev, item) => prev + Number(item.diffCount), 0)
+      })
       saveToFile(header, exportData, `${new Date().getTime()}.xlsx`);
     },
     ParsePDF() {
-      self.excelFile = null;
+      this.excelFile = null;
+      this.PdfDataList = [];
+
       if (this.fileList) {
         var isAnyNoPwd = this.fileList.some(item => !item.pwd && item.checkPassword);
         if (!isAnyNoPwd) {
@@ -198,8 +231,6 @@ export default {
 
     },
     async pdf2json() {
-
-      this.PdfDataList = [];
       try {
         var data = await pdf2json(deepClone(this.fileList));
         if (!data || data.some(item => !item.MID)) {
