@@ -172,12 +172,12 @@ export default {
         return {
           MID: item.MID,
           SID: item.SID,
-          "MTG_SchoolName": item.MTG_SchoolName,
-          'MTG_PayType': item.MTG_PayType,
-          'MTG_Fee': item.MTG_Fee,
-          "MTG_Count": item.MTG_Count,
-          'Fee': item.Fee,
-          'Count': item.Count,
+          "MTG_SchoolName": item.MTG_SchoolName || item.SchoolName,
+          'MTG_PayType': item.MTG_PayType || '',
+          'MTG_Fee': item.MTG_Fee || 0,
+          "MTG_Count": item.MTG_Count || 0,
+          'Fee': item.Fee || 0,
+          'Count': item.Count || 0,
           'Balance': item.Balance,
           "diffCount": Math.abs(Number(item.MTG_Count) - Number(item.Count))
         }
